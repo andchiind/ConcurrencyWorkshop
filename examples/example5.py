@@ -1,42 +1,36 @@
 from threading import Thread, Lock
 import time
-from typing import List
 
 
-def run_print_index_sum(locks: List[Lock], indices: List[int]):
-    assert len(locks) == len(indices)
+def x_plus_y(x: int, y: int, x_lock: Lock, y_lock:Lock):
     while True:
-        print_index_sum(locks, indices, 0, 1)
+        x_lock.acquire()
+        y_lock.acquire()
+        print(f"Sum of x and y {x + y}")
+        time.sleep(0.1)
+        y_lock.release()
+        x_lock.release()
 
-
-def print_index_sum(locks: List[Lock], indices: List[int], sum, depth):
-    time.sleep(0.1)  # This actually makes the issue less noticeable
-    locks[-1].acquire()
-    if len(locks) > 1:
-        print_index_sum(locks[:-1], indices[1:], indices[0] + sum, depth + 1)
-    else:
-        print(f"The sum at index {depth} is {sum + indices[0]}")
-    locks[-1].release()
-
+def y_times_x(y: int, x: int, y_lock: Lock, x_lock: Lock):
+    while True:
+        y_lock.acquire()
+        x_lock.acquire()
+        print(f"Product of y and x {y * x}")
+        time.sleep(0.1)
+        y_lock.release()
+        x_lock.release()
 
 def example5():
-    """This example is showing starvation due to greedy threads. Let's fix that"""
+    '''This example is showing a deadlock where two threads are 
+    competing with two locks. Let's debug it'''
+    x = 4
+    y = 3
+    x_lock = Lock()
+    y_lock = Lock()
+    thread1 = Thread(name="X + Y", target=x_plus_y, args=(x, y, x_lock, y_lock))
+    thread2 = Thread(name="Y + X", target=y_times_x, args=(y, x, y_lock, x_lock))
 
-    threads_n = 10
-
-    shared_locks = [Lock() for i in range(threads_n)]
-
-    threads = [
-        Thread(
-            name=f"Thread {i}",
-            target=run_print_index_sum,
-            args=(shared_locks[:i], range(i)),
-        )
-        for i in range(1, threads_n + 1)
-    ]
-
-    for thread in threads:
-        thread.start()
-
-    for thread in threads:
-        thread.join()  # This will of course never stop blocking
+    thread1.start()
+    thread2.start()
+    thread1.join()
+    thread2.join()

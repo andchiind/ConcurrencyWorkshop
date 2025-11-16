@@ -1,8 +1,7 @@
-from threading import Thread
 import time
 
 def example1():
-    '''This example will never end. Let's try close them from the parent'''
+    '''This example does not let our current program progress'''
     def foo():
         i = 0
         while True:
@@ -10,10 +9,10 @@ def example1():
             i +=1 
             time.sleep(1)
 
-    thread1 = Thread(name="This is number one", target=foo)
-    thread2 = Thread(name="And then this is number two", target=foo)
+    foo() # Run counter iterator
 
-    thread1.start()
-    thread2.start()
-    thread1.join()
-    thread2.join()
+    # Get feedback from the user
+    print("Hello user, we have now started doing that work you asked us to do")
+    print("Please leave a review below")
+    response = input()
+    print(f"Thank you for the response: {response}")

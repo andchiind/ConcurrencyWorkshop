@@ -1,61 +1,46 @@
 from threading import Thread, Lock
 import time
+from typing import List
 
-i = 0
 
-mutex_lock = Lock()
+def run_print_index_sum(locks: List[Lock], indices: List[int]):
+    '''This function prints the sum of the given list of indices, respecting
+    the lock for all the preceding elements in the list'''
+    assert len(locks) == len(indices)
+    while True:
+        print_index_sum(locks, indices, 0, 1)
 
-def increment_even_numbers():
-    global i
-    global mutex_lock
-    while i < 40:
-        mutex_lock.acquire(blocking=True)
-        print("Even thread acquired lock")
-        if i & 1 != 1:
-            print(f"Updating even number. Before {i}", end='')
-            i += 1 
-            print(f" and after {i}")
-        print("Even thread releasing lock")
-        mutex_lock.release()
-        
-        time.sleep(0.5)
 
-def increment_odd_numbers():
-    global i
-    global mutex_lock
-    try:
-        while i < 40:
-            mutex_lock.acquire(blocking=True)
-            print("Odd thread acquired lock")
-            if i & 1 == 1:
-                print(f"Updating odd number. Before {j}", end='')
-                i += 1 
-                print(f" and after {i}")
-            print("Odd thread releasing lock")
-            mutex_lock.release()
+def print_index_sum(locks: List[Lock], indices: List[int], sum, depth):
+    '''This function acquires the lock at the current list index, then either
+    prints out the current index sum, or recursively progresses down the list'''
+    time.sleep(0.1)  # This actually makes the issue less noticeable
+    locks[-1].acquire()
+    if len(locks) > 1:
+        print_index_sum(locks[:-1], indices[1:], indices[0] + sum, depth + 1)
+    else:
+        print(f"The sum at index {depth} is {sum + indices[0]}")
+    locks[-1].release()
 
-            time.sleep(0.5)
-    except Exception as e:
-        print("whoopsie")
-
-def monitor_number():
-    global i
-    while i < 40:
-        print(f"Current number status: {i}")
-        time.sleep(5)
 
 def example4():
-    '''This example is not allowing all threads to continue. Let's fix that'''
+    """This example is showing starvation due to greedy threads. Let's fix that"""
 
-    thread1 = Thread(name="Even numbers", target=increment_even_numbers)
-    thread2 = Thread(name="Odd numbers", target=increment_odd_numbers)
-    thread3 = Thread(name="Number monitoring", target=monitor_number)
+    threads_n = 10
 
-    print()
+    shared_locks = [Lock() for i in range(threads_n)]
 
-    thread1.start()
-    thread2.start()
-    thread3.start()
-    thread1.join()
-    thread2.join()
-    thread3.join()
+    threads = [
+        Thread(
+            name=f"Thread {i}",
+            target=run_print_index_sum,
+            args=(shared_locks[:i], range(i)),
+        )
+        for i in range(1, threads_n + 1)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()  # This will of course never stop blocking
